@@ -2,17 +2,20 @@
 # Practica 2: Extraccion, descripcion y correspondencia de caracteristicas locales
 # Tarea 1: Deteccion de puntos de interes con Harris corner detector.
 
-# AUTOR1: APELLIDO1 APELLIDO1, NOMBRE1
-# AUTOR2: APELLIDO2 APELLIDO2, NOMBRE2
-# PAREJA/TURNO: NUMERO_PAREJA/NUMERO_TURNO
+# AUTOR1: ROMERO MONZÓN, RAFAEL
+# AUTOR2: LANDALUCE FERNÁNDEZ, ABEL
+# PAREJA/TURNO: 13/NUMERO_TURNO
 
 # librerias y paquetes por defecto
 import numpy as np
+
 from p2_tests import test_p2_tarea1
 
 # Incluya aqui las librerias que necesite en su codigo
-# ...
-
+from scipy import ndimage
+from scipy import signal
+from scipy.ndimage import gaussian_filter
+from skimage.feature import corner_peaks
 
 def detectar_puntos_interes_harris(imagen, sigma = 1.0, k = 0.05, threshold_rel = 0.2):
     """
@@ -33,9 +36,73 @@ def detectar_puntos_interes_harris(imagen, sigma = 1.0, k = 0.05, threshold_rel 
     """
     coords_esquinas = np.empty(shape=[0,0]) # iniciamos la variable de salida (numpy array)
 
-    #incluya su codigo aqui
-    #...
-    
+   
+    # Normalizar imagen a float en [0,1] manualmente 
+    img = imagen.astype(np.float64)
+
+    # Si la imagen es RGB, convertir a escala de grises mediante promedio (opcional).
+    if img.ndim == 3:
+        # promedio sobre canales (simple y permisible cuando no se puede usar utilidades externas)
+        img = np.mean(img, axis=2)
+
+    # Normalización manual: restar mínimo y dividir por rango si el rango > 0
+    minv = img.min()
+    maxv = img.max()
+    if maxv > minv:
+        img = (img - minv) / (maxv - minv)
+    else:
+        # imagen constante -> retorna array vacío
+        return np.zeros((0, 2), dtype=np.int64)
+
+    # Derivadas usando kernels de Sobel con convolve2d (mode='same') 
+    # Kernel Sobel en X
+    sobel_x = np.array([[-1, 0, 1],
+                        [-2, 0, 2],
+                        [-1, 0, 1]], dtype=np.float64)
+    # Kernel Sobel en Y (transpuesta)
+    sobel_y = sobel_x.T
+
+    # Usar boundary='symm' para evitar artefactos fuertes en los bordes
+    Ix = signal.convolve2d(img, sobel_x, mode='same', boundary='symm')
+    Iy = signal.convolve2d(img, sobel_y, mode='same', boundary='symm')
+
+    # Productos de derivadas
+    Ixx = Ix * Ix
+    Iyy = Iy * Iy
+    Ixy = Ix * Iy
+
+    # Suavizado con Gaussiano (ventana w(u,v) = 1x1 + smoothing por gaussian_filter)
+    # Se pide usar gaussian_filter con mode='constant'
+    Sxx = gaussian_filter(Ixx, sigma=sigma, mode='constant')
+    Syy = gaussian_filter(Iyy, sigma=sigma, mode='constant')
+    Sxy = gaussian_filter(Ixy, sigma=sigma, mode='constant')
+
+    # Calcular R (respuesta de Harris)
+    detM = (Sxx * Syy) - (Sxy ** 2)
+    traceM = Sxx + Syy
+    R = detM - k * (traceM ** 2)
+
+    # Umbral relativo
+    R_max = np.max(R)
+    # Si R_max <= 0, no hay respuestas positivas (pero puede haber negativos); igual aplicamos umbral
+    R_threshold = threshold_rel * R_max
+    # Para permitir detectar esquinas en imágenes con R_max <= 0, podemos filtrar por R > R_threshold
+    mask_threshold = R > R_threshold
+
+    # Extracción de máximos locales con min_distance = 5 
+    # peak_local_max devuelve coordenadas en (fila, columna)
+    # Si no hay valores por encima del umbral, devolvemos array vacío
+    if not np.any(mask_threshold):
+        return np.zeros((0, 2), dtype=np.int64)
+
+    # Aplicar corner_peaks sobre la respuesta R con threshold_abs y min_distance
+    coords = corner_peaks(R, min_distance=5, threshold_rel=threshold_rel)
+
+    # Asegurarse de que coords tenga dtype int64 y forma (N,2)
+    if coords is None or coords.size == 0:
+        return np.zeros((0, 2), dtype=np.int64)
+
+    coords_esquinas = np.asarray(coords, dtype=np.int64)
     return coords_esquinas
 
 if __name__ == "__main__":    

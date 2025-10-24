@@ -2,9 +2,9 @@
 # Practica 2: Extraccion, descripcion y correspondencia de caracteristicas locales
 # Tarea 2: Descripcion de puntos de interes mediante histogramas.
 
-# AUTOR1: APELLIDO1 APELLIDO1, NOMBRE1
-# AUTOR2: APELLIDO2 APELLIDO2, NOMBRE2
-# PAREJA/TURNO: NUMERO_PAREJA/NUMERO_TURNO
+# AUTOR1: ROMERO MONZÓN, RAFAEL
+# AUTOR2: LANDALUCE FERNÁNDEZ, ABEL
+# PAREJA/TURNO: 13/NUMERO_TURNO
 
 # librerias y paquetes por defecto
 import numpy as np
@@ -51,7 +51,20 @@ def descripcion_puntos_interes(imagen, coords_esquinas, vtam = 8, nbins = 16, ti
     new_coords_esquinas = np.empty(shape=[0,0]) # iniciamos la variable de salida (numpy array)
 
     #incluya su codigo aqui
-    #...    
+    img = imagen.astype(np.float64)
+
+    if img.ndim == 3:
+        img = np.mean(img, axis=2)
+    
+    if tipoDesc == 'hist':
+        # Calcula el gradiente de la imagen
+        # Considerar nbins de cuantificación homogeneos entre 0 y 360 grados
+        # En cada nivel de cuantificación
+    else if tipoDesc == 'mag-ori':
+
+    
+
+    
 
     return descriptores, new_coords_esquinas
 
