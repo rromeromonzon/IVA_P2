@@ -105,10 +105,10 @@ def detectar_puntos_interes_harris(imagen, sigma = 1.0, k = 0.05, threshold_rel 
     coords_esquinas = np.asarray(coords, dtype=np.int64)
     return coords_esquinas
 
-if __name__ == "__main__":    
-    print("Practica 2 - Tarea 1 - Test autoevaluación\n")                
+if __name__ == "__main__":
+    print("Practica 2 - Tarea 1 - Test autoevaluación\n")
     
-    print("Tests completados = " + str(test_p2_tarea1(disptime=-1,stop_at_error=False,debug=False))) #analizar todos los casos sin pararse en errores
-    #print("Tests completados = " + str(test_p2_tarea1(disptime=1,stop_at_error=False,debug=False))) #analizar y visualizar todos los casos sin pararse en errores
+    # print("Tests completados = " + str(test_p2_tarea1(disptime=-1,stop_at_error=False,debug=False))) #analizar todos los casos sin pararse en errores
+    print("Tests completados = " + str(test_p2_tarea1(disptime=1,stop_at_error=False,debug=False))) #analizar y visualizar todos los casos sin pararse en errores
     #print("Tests completados = " + str(test_p2_tarea1(disptime=-1,stop_at_error=True,debug=False))) #analizar todos los casos y pararse en errores 
     #print("Tests completados = " + str(test_p2_tarea1(disptime=-1,stop_at_error=True,debug=True))) #analizar todos los casos, pararse en errores y mostrar informacion
