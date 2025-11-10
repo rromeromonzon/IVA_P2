@@ -9,7 +9,7 @@
 # librerias y paquetes por defecto
 import numpy as np
 # Incluya aqui las librerias que necesite en su codigo
-# ...
+from scipy.ndimage import sobel
 
 def descripcion_puntos_interes(imagen, coords_esquinas, vtam = 8, nbins = 16, tipoDesc='hist'):
     """
@@ -115,11 +115,290 @@ def descripcion_puntos_interes(imagen, coords_esquinas, vtam = 8, nbins = 16, ti
         
     elif tipoDesc == 'mag-ori':
         # Calcula el gradiente de la imagen
-        # Considerar nbins de cuantificación homogeneos entre 0 y 360 grados
-        # En cada nivel de cuantificación
-        pass
-    
+        # Calcule el gradiente como visto en clase (Sobel)
+        Gx = sobel(img, axis=1) # Gradiente en x (horizontal, columnas)
+        Gy = sobel(img, axis=0) # Gradiente en y (vertical, filas)
 
+        # Magnitud: M = sqrt(Gx^2 + Gy^2)
+        magnitud = np.sqrt(Gx**2 + Gy**2)
+
+        # Orientación: O = atan2(Gy, Gx) en grados en el rango [-180, 180]
+        orientacion_rad = np.arctan2(Gy, Gx)
+        # Convertir a grados [0, 360) (o similar, para evitar negativos)
+        orientacion_deg = np.rad2deg(orientacion_rad)
+        # Mapear al rango [0, 360)
+        orientacion_deg = np.where(orientacion_deg < 0, orientacion_deg + 360, orientacion_deg)
+        import numpy as np
+from scipy.ndimage import sobel
+
+def descripcion_puntos_interes(imagen, coords_esquinas, vtam = 8, nbins = 16, tipoDesc='hist'):
+    """
+    # Esta funcion describe puntos de interes de una imagen mediante histogramas, analizando 
+    # vecindarios con dimensiones "vtam+1"x"vtam+1" centrados en las coordenadas de cada punto de interes
+    #   
+    # La descripcion obtenida depende del parametro 'tipoDesc'
+    #   - Caso 'hist': histograma normalizado de valores de gris 
+    #   - Caso 'mag-ori': histograma de orientaciones de gradiente (HOG)
+    #
+    # En el caso de que existan puntos de interes en los bordes de la imagen, el descriptor no
+    # se calcula y el punto de interes se elimina de la lista <new_coords_esquinas> que devuelve
+    # esta funcion. Esta lista indica los puntos de interes para los cuales existe descriptor.
+    #
+    # Argumentos de entrada:
+    #   - imagen: numpy array con dimensiones [imagen_height, imagen_width]. 		
+    #   - coords_esquinas: numpy array con dimensiones [num_puntos_interes, 2] con las coordenadas 
+    #   	  de los puntos de interes detectados en la imagen. Tipo int64
+    #   	  Cada punto de interes se encuentra en el formato [fila, columna]
+    #   - vtam: valor de tipo entero que indica el tamaño del vecindario a considerar para
+    #   	  calcular el descriptor correspondiente.
+    #   - nbins: valor de tipo entero que indica el numero de niveles que tiene el histograma 
+    #   	  para calcular el descriptor correspondiente.
+    #   - tipoDesc: cadena de caracteres que indica el tipo de descriptor calculado
+    #
+    # Argumentos de salida
+    #   - descriptores: numpy array con dimensiones [num_puntos_interes, nbins] con los descriptores 
+    #   	  de cada punto de interes (i.e. histograma de niveles de gris)
+    #   - new_coords_esquinas: numpy array con dimensiones [num_puntos_interes, 2], solamente con las coordenadas 
+    #   	  de los puntos de interes descritos. Tipo int64 	<class 'numpy.ndarray'>
+    #
+    # NOTA: no modificar los valores por defecto de las variables de entrada vtam y nbins, 
+    # 	  pues se utilizan para verificar el correcto funciomaniento de esta funcion
+    """
+    # Iniciamos variables de salida
+    descriptores = np.empty(shape=[0,0]) # iniciamos la variable de salida (numpy array)
+    new_coords_esquinas = np.empty(shape=[0,0]) # iniciamos la variable de salida (numpy array)
+
+    # 1. Normalización de la imagen al rango [0, 1] manualmente
+    img = imagen.astype(np.float64)
+    
+    # Si la imagen es de color, convertir a escala de grises (promedio simple)
+    if img.ndim == 3:
+        img = np.mean(img, axis=2)
+    
+    # Normalizar al rango [0, 1]
+    img_min = np.min(img)
+    img_max = np.max(img)
+    if img_max > img_min:
+        img = (img - img_min) / (img_max - img_min)
+    else:
+        # Caso imagen constante (división por cero)
+        img = img - img_min
+
+    # Variables comunes
+    lista_desc = []
+    lista_coords = []
+    alto, ancho = img.shape
+    radio = vtam // 2 # Vecindario vtam+1 x vtam+1
+
+    
+    # 2. Descriptor 'hist' (Histograma de Niveles de Gris)
+    if tipoDesc == 'hist':
+        
+        # Recorrer cada punto de interés
+        for coord in coords_esquinas:
+            fila = int(coord[0])
+            col = int(coord[1])
+
+            # Comprobar que el vecindario completo cabe dentro de la imagen
+            if (fila - radio >= 0 and fila + radio + 1 <= alto and
+                col - radio >= 0 and col + radio + 1 <= ancho):
+
+                # Extraer vecindario (vtam+1) x (vtam+1)
+                patch = img[fila - radio:fila + radio + 1,
+                            col - radio:col + radio + 1]
+
+                # Aplanar y calcular histograma con nbins, intervalos homogéneos [a,b) en [0,1]
+                vals = patch.flatten()
+                hist, _ = np.histogram(vals, bins=nbins, range=(0, 1))
+
+                # Normalizar (suma total = 1)
+                total = np.sum(hist)
+                if total > 0:
+                    hist = hist.astype(np.float64) / total
+                else:
+                    hist = hist.astype(np.float64)
+
+                lista_desc.append(hist)
+                lista_coords.append([fila, col])
+
+    
+    # 3. Descriptor 'mag-ori' (Histograma de Gradientes Orientados - HOG)
+    elif tipoDesc == 'mag-ori':
+        
+        # a) Calcular gradiente (pasos para obtención del histograma)
+        # Calcule el gradiente como visto en clase (Sobel)
+        Gx = sobel(img, axis=1) # Gradiente en x (horizontal, columnas)
+        Gy = sobel(img, axis=0) # Gradiente en y (vertical, filas)
+        
+        # Magnitud: M = sqrt(Gx^2 + Gy^2)
+        magnitud = np.sqrt(Gx**2 + Gy**2)
+        
+        # Orientación: O = atan2(Gy, Gx) en grados en el rango [-180, 180]
+        orientacion_rad = np.arctan2(Gy, Gx)
+        # Convertir a grados [0, 360) (o similar, para evitar negativos)
+        orientacion_deg = np.rad2deg(orientacion_rad)
+        # Mapear al rango [0, 360)
+        orientacion_deg = np.where(orientacion_deg < 0, orientacion_deg + 360, orientacion_deg)
+        import numpy as np
+from scipy.ndimage import sobel
+
+def descripcion_puntos_interes(imagen, coords_esquinas, vtam = 8, nbins = 16, tipoDesc='hist'):
+    """
+    # Esta funcion describe puntos de interes de una imagen mediante histogramas, analizando 
+    # vecindarios con dimensiones "vtam+1"x"vtam+1" centrados en las coordenadas de cada punto de interes
+    #   
+    # La descripcion obtenida depende del parametro 'tipoDesc'
+    #   - Caso 'hist': histograma normalizado de valores de gris 
+    #   - Caso 'mag-ori': histograma de orientaciones de gradiente (HOG)
+    #
+    # En el caso de que existan puntos de interes en los bordes de la imagen, el descriptor no
+    # se calcula y el punto de interes se elimina de la lista <new_coords_esquinas> que devuelve
+    # esta funcion. Esta lista indica los puntos de interes para los cuales existe descriptor.
+    #
+    # Argumentos de entrada:
+    #   - imagen: numpy array con dimensiones [imagen_height, imagen_width]. 		
+    #   - coords_esquinas: numpy array con dimensiones [num_puntos_interes, 2] con las coordenadas 
+    #   	  de los puntos de interes detectados en la imagen. Tipo int64
+    #   	  Cada punto de interes se encuentra en el formato [fila, columna]
+    #   - vtam: valor de tipo entero que indica el tamaño del vecindario a considerar para
+    #   	  calcular el descriptor correspondiente.
+    #   - nbins: valor de tipo entero que indica el numero de niveles que tiene el histograma 
+    #   	  para calcular el descriptor correspondiente.
+    #   - tipoDesc: cadena de caracteres que indica el tipo de descriptor calculado
+    #
+    # Argumentos de salida
+    #   - descriptores: numpy array con dimensiones [num_puntos_interes, nbins] con los descriptores 
+    #   	  de cada punto de interes (i.e. histograma de niveles de gris)
+    #   - new_coords_esquinas: numpy array con dimensiones [num_puntos_interes, 2], solamente con las coordenadas 
+    #   	  de los puntos de interes descritos. Tipo int64 	<class 'numpy.ndarray'>
+    #
+    # NOTA: no modificar los valores por defecto de las variables de entrada vtam y nbins, 
+    # 	  pues se utilizan para verificar el correcto funciomaniento de esta funcion
+    """
+    # Iniciamos variables de salida
+    descriptores = np.empty(shape=[0,0]) # iniciamos la variable de salida (numpy array)
+    new_coords_esquinas = np.empty(shape=[0,0]) # iniciamos la variable de salida (numpy array)
+
+    # 1. Normalización de la imagen al rango [0, 1] manualmente
+    img = imagen.astype(np.float64)
+    
+    # Si la imagen es de color, convertir a escala de grises (promedio simple)
+    if img.ndim == 3:
+        img = np.mean(img, axis=2)
+    
+    # Normalizar al rango [0, 1]
+    img_min = np.min(img)
+    img_max = np.max(img)
+    if img_max > img_min:
+        img = (img - img_min) / (img_max - img_min)
+    else:
+        # Caso imagen constante (división por cero)
+        img = img - img_min
+
+    # Variables comunes
+    lista_desc = []
+    lista_coords = []
+    alto, ancho = img.shape
+    radio = vtam // 2 # Vecindario vtam+1 x vtam+1
+
+    
+    # 2. Descriptor 'hist' (Histograma de Niveles de Gris)
+    if tipoDesc == 'hist':
+        
+        # Recorrer cada punto de interés
+        for coord in coords_esquinas:
+            fila = int(coord[0])
+            col = int(coord[1])
+
+            # Comprobar que el vecindario completo cabe dentro de la imagen
+            if (fila - radio >= 0 and fila + radio + 1 <= alto and
+                col - radio >= 0 and col + radio + 1 <= ancho):
+
+                # Extraer vecindario (vtam+1) x (vtam+1)
+                patch = img[fila - radio:fila + radio + 1,
+                            col - radio:col + radio + 1]
+
+                # Aplanar y calcular histograma con nbins, intervalos homogéneos [a,b) en [0,1]
+                vals = patch.flatten()
+                hist, _ = np.histogram(vals, bins=nbins, range=(0, 1))
+
+                # Normalizar (suma total = 1)
+                total = np.sum(hist)
+                if total > 0:
+                    hist = hist.astype(np.float64) / total
+                else:
+                    hist = hist.astype(np.float64)
+
+                lista_desc.append(hist)
+                lista_coords.append([fila, col])
+
+    
+    # 3. Descriptor 'mag-ori' (Histograma de Gradientes Orientados - HOG)
+    elif tipoDesc == 'mag-ori':
+        
+        # a) Calcular gradiente (pasos para obtención del histograma)
+        # Calcule el gradiente como visto en clase (Sobel)
+        Gx = sobel(img, axis=1) # Gradiente en x (horizontal, columnas)
+        Gy = sobel(img, axis=0) # Gradiente en y (vertical, filas)
+        
+        # Magnitud: M = sqrt(Gx^2 + Gy^2)
+        magnitud = np.sqrt(Gx**2 + Gy**2)
+        
+        # Orientación: O = atan2(Gy, Gx) en grados en el rango [-180, 180]
+        orientacion_rad = np.arctan2(Gy, Gx)
+        # Convertir a grados [0, 360) (o similar, para evitar negativos)
+        orientacion_deg = np.rad2deg(orientacion_rad)
+        # Mapear al rango [0, 360)
+        orientacion_deg = np.where(orientacion_deg < 0, orientacion_deg + 360, orientacion_deg)
+        # Niveles de cuantificación
+        # Considerar nbins de cuantificación homogeneos entre 0 y 360 grados
+        # Crear los 17 (nbins+1) valores que definen los 16 (nbins) intervalos [a, b)
+        bin_edges = np.linspace(0, 360, nbins + 1)
+        # np.digitize mapea valores <= bin_edges[i] a i+1 (por defecto).
+        # Los nbins niveles están definidos por los nbins+1 bordes.
+        # Recorrer cada punto de interés
+        for coord in coords_esquinas:
+            fila = int(coord[0])
+            col = int(coord[1])
+
+            # Comprobar que el vecindario completo cabe dentro de la imagen
+            if (fila - radio >= 0 and fila + radio + 1 <= alto and
+                col - radio >= 0 and col + radio + 1 <= ancho):
+
+                # Extraer vecindarios (vtam+1) x (vtam+1) para Magnitud y Orientación
+                mag_patch = magnitud[fila - radio:fila + radio + 1,
+                                     col - radio:col + radio + 1].flatten()
+                ori_patch = orientacion_deg[fila - radio:fila + radio + 1,
+                                            col - radio:col + radio + 1].flatten()
+                
+                # Inicializar histograma
+                hist = np.zeros(nbins, dtype=np.float64)
+                #Asignar valores a bins (cuantificación)
+                bins_limites = bin_edges[1:] 
+                indices_bin = np.digitize(ori_patch, bins_limites)
+                
+                
+                # Asignar a bin 0 los índices que dan nbins (360º)
+                indices_bin[indices_bin == nbins] = 0
+                
+                # Llenar el histograma (suma de magnitudes)
+                # Acumulación de magnitudes en el bin correspondiente
+                np.add.at(hist, indices_bin, mag_patch)
+
+                # Normalizar (suma total = 1)
+                total = np.sum(hist)
+                if total > 0:
+                    hist = hist / total
+
+                lista_desc.append(hist)
+                lista_coords.append([fila, col])
+    
+    if len(lista_desc) > 0:
+        descriptores = np.asarray(lista_desc)
+        new_coords_esquinas = np.asarray(lista_coords, dtype=np.int64)
+    else:
+        descriptores = np.empty((0, nbins))
+        new_coords_esquinas = np.empty((0, 2), dtype=np.int64)
     
 
     return descriptores, new_coords_esquinas
