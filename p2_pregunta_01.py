@@ -16,9 +16,7 @@ from p2_tarea2 import descripcion_puntos_interes
 def main_visualizacion_descriptores():
     # 1. Cargar la imagen y definir el punto de interés
     imagen = data.camera()
-    
-    # Usaremos un punto de interés con más contraste (cerca del hombro)
-    # Coordenadas elegidas: (Fila 150, Columna 200)
+
     centro_fila = 150 
     centro_col = 200
     coords_esquinas = np.array([[centro_fila, centro_col]])
