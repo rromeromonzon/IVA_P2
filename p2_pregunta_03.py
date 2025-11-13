@@ -6,10 +6,6 @@
 # AUTOR2: LANDALUCE FERNÁNDEZ, ABEL
 # PAREJA/TURNO: 13/NUMERO_TURNO
 
-# =========================================================================
-# FUNCIONES DE TAREA (T1, T2, T3)
-# =========================================================================
-
 import numpy as np
 from scipy import signal
 from scipy.ndimage import gaussian_filter, sobel
@@ -50,6 +46,37 @@ def plot_correspondences(img1, coords1, img2, coords2, corr, title, color='r'):
     
     plt.show()
 
+def plot_corners_pair(img1, coords1, img2, coords2, title):
+    """ 
+    Función para visualizar dos imágenes y sus puntos de interés detectados lado a lado. 
+    """
+    if img1.ndim == 3: img1_gray = np.mean(img1, axis=2)
+    else: img1_gray = img1
+    if img2.ndim == 3: img2_gray = np.mean(img2, axis=2)
+    else: img2_gray = img2
+
+    H1, W1 = img1_gray.shape
+    H2, W2 = img2_gray.shape
+    
+    combined_img = np.zeros((max(H1, H2), W1 + W2), dtype=np.float64)
+    combined_img[:H1, :W1] = img1_gray
+    combined_img[:H2, W1:] = img2_gray
+
+    plt.figure(figsize=(15, 7))
+    plt.imshow(combined_img, cmap='gray')
+    plt.title(title)
+    plt.axis('off')
+
+    # Dibujar los puntos de interés de la imagen 1
+    if coords1.size > 0:
+        plt.plot(coords1[:, 1], coords1[:, 0], 'r.', markersize=4, label=f'Esquinas Img1 ({len(coords1)})')
+    
+    # Dibujar los puntos de interés de la imagen 2 (desplazados)
+    if coords2.size > 0:
+        plt.plot(coords2[:, 1] + W1, coords2[:, 0], 'g.', markersize=4, label=f'Esquinas Img2 ({len(coords2)})')
+    
+    plt.legend()
+    plt.show()
 
 def analisis_p2_3(img_dir='img', nbins=16, max_distancia=0.2):
     """
@@ -81,22 +108,25 @@ def analisis_p2_3(img_dir='img', nbins=16, max_distancia=0.2):
             coords2 = detectar_puntos_interes_harris(img2)
             
             print(f"Esquinas detectadas en Img1: {len(coords1)}, en Img2: {len(coords2)}")
-                
+            # --- Visualización de Esquinas ---
+            plot_corners_pair(img1, coords1, img2, coords2, 
+                              f"Esquinas Harris Detectadas: {img1_name} vs {img2_name}")
+
             print("\n Descriptor 'hist' (Intensidad)")
-            desc1_hist, new_coords1_hist = descripcion_puntos_interes(img1, coords1, nbins=nbins, tipoDesc='hist')
-            desc2_hist, new_coords2_hist = descripcion_puntos_interes(img2, coords2, nbins=nbins, tipoDesc='hist')
+            desc1_hist, new_coords1_hist = descripcion_puntos_interes(img1,coords1, tipoDesc='hist')
+            desc2_hist, new_coords2_hist = descripcion_puntos_interes(img2,coords2, tipoDesc='hist')
             
-            corr_hist = correspondencias_puntos_interes(desc1_hist, desc2_hist, max_distancia=max_distancia)
+            corr_hist = correspondencias_puntos_interes(desc1_hist, desc2_hist)
             
             print(f"  Correspondencias 'hist' encontradas: {len(corr_hist)}")
             plot_correspondences(img1, new_coords1_hist, img2, new_coords2_hist, corr_hist, 
                                  f"{title} 'hist' ({len(corr_hist)}/{len(desc1_hist)})", color='blue')
 
             print("\n Descriptor 'mag-ori' (Gradiente)")
-            desc1_magori, new_coords1_magori = descripcion_puntos_interes(img1, coords1, nbins=nbins, tipoDesc='mag-ori')
-            desc2_magori, new_coords2_magori = descripcion_puntos_interes(img2, coords2, nbins=nbins, tipoDesc='mag-ori')
+            desc1_magori, new_coords1_magori = descripcion_puntos_interes(img1,coords1, tipoDesc='mag-ori')
+            desc2_magori, new_coords2_magori = descripcion_puntos_interes(img2,coords2, tipoDesc='mag-ori')
 
-            corr_magori = correspondencias_puntos_interes(desc1_magori, desc2_magori, max_distancia=max_distancia)
+            corr_magori = correspondencias_puntos_interes(desc1_magori, desc2_magori)
             
             print(f"  Correspondencias 'mag-ori' encontradas: {len(corr_magori)}")
             plot_correspondences(img1, new_coords1_magori, img2, new_coords2_magori, corr_magori, 
