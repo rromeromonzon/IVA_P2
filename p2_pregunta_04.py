@@ -207,9 +207,9 @@ def mostrar_correspondencias_comparacion(img1, coords1, img2, coords2,
                     markersize=8, markeredgecolor='yellow', markeredgewidth=2)
             lines_drawn += 1
         else:
-            print(f"      ⚠️  Correspondencia {idx} fuera de límites: ({x1_coord},{y1}) -> ({x2_coord},{y2})")
+            print(f"         Correspondencia {idx} fuera de límites: ({x1_coord},{y1}) -> ({x2_coord},{y2})")
     
-    print(f"      ✓ {lines_drawn} líneas dibujadas (de {len(corr_mindist)} correspondencias)")
+    print(f"        {lines_drawn} líneas dibujadas (de {len(corr_mindist)} correspondencias)")
     
     ax1.set_title('MinDist', fontsize=14, fontweight='bold', pad=10)
     ax1.axis('off')
@@ -248,10 +248,10 @@ def mostrar_correspondencias_comparacion(img1, coords1, img2, coords2,
                 lines_drawn_nndr += 1
                 print(f"      NNDR [{i:3d} -> {j:3d}]: punto1=({x1_coord:4.0f},{y1:4.0f}) punto2=({x2_coord:4.0f},{y2:4.0f})")
             else:
-                print(f"      ⚠️  Correspondencia NNDR {idx} fuera de límites: ({x1_coord},{y1}) -> ({x2_coord},{y2})")
-    
-    print(f"      ✓ {lines_drawn_nndr} líneas dibujadas (de {len(corr_nndr)} correspondencias NNDR)")
-    
+                print(f"         Correspondencia NNDR {idx} fuera de límites: ({x1_coord},{y1}) -> ({x2_coord},{y2})")
+
+    print(f"         {lines_drawn_nndr} líneas dibujadas (de {len(corr_nndr)} correspondencias NNDR)")
+
     ax2.set_title('NNDR (umbral=0.75)', fontsize=14, fontweight='bold', pad=10)
     ax2.axis('off')
     
@@ -264,7 +264,7 @@ def mostrar_correspondencias_comparacion(img1, coords1, img2, coords2,
     plt.tight_layout(rect=[0, 0.03, 1, 0.96])
     
     # Mostrar la figura inmediatamente y esperar a que se cierre
-    print(f"\n  📊 Mostrando figura. Cierra la ventana para continuar...")
+    print(f"\n    Mostrando figura. Cierra la ventana para continuar...")
     plt.show(block=True)  # Bloquear hasta que se cierre la ventana
     
     return fig
@@ -296,7 +296,7 @@ def analizar_par_imagenes(nombre_img, transformacion, nombre_par, tipoDesc='hist
         img1 = cargar_imagen_skimage(nombre_img)
     
     if img1 is None:
-        print(f"  ✗ Error al cargar imagen")
+        print("  Error al cargar imagen")
         return None
     
     # Crear imagen transformada
@@ -340,8 +340,8 @@ def analizar_par_imagenes(nombre_img, transformacion, nombre_par, tipoDesc='hist
     # Análisis
     filtradas = len(corr_mindist) - len(corr_nndr)
     porcentaje = 100 * len(corr_nndr) / max(1, len(corr_mindist))
-    
-    print(f"\n  📊 RESUMEN:")
+
+    print(f"\n  RESUMEN:")
     print(f"    • MinDist:  {len(corr_mindist)} correspondencias")
     print(f"    • NNDR:     {len(corr_nndr)} correspondencias")
     print(f"    • Filtradas: {filtradas} correspondencias ambiguas")
@@ -349,7 +349,7 @@ def analizar_par_imagenes(nombre_img, transformacion, nombre_par, tipoDesc='hist
     
     # Calcular ratios de algunas correspondencias NNDR para mostrar
     if len(corr_nndr) > 0:
-        print(f"\n  🔍 Ejemplos de ratios en correspondencias NNDR:")
+        print(f"\n  Ejemplos de ratios en correspondencias NNDR:")
         # Mostrar hasta 5 ejemplos
         n_ejemplos = min(5, len(corr_nndr))
         for idx in range(n_ejemplos):
@@ -384,9 +384,7 @@ def main():
     Usa solo imágenes de skimage.data
     """
     print("\n")
-    print("╔" + "═" * 68 + "╗")
-    print("║" + " " * 10 + "EJEMPLOS VISUALES CRITERIO NNDR - P2 PREGUNTA 04" + " " * 10 + "║")
-    print("╚" + "═" * 68 + "╝")
+    print("RESUMEN GLOBAL")
     print()
     print("Usando solo imágenes de skimage.data")
     print("  • Transformaciones: Rotación +4°, Rotación -4°, Inversión horizontal + Rotación +4°")
@@ -430,15 +428,13 @@ def main():
                     figuras.append(fig)
                     resultados.append(info)
             except Exception as e:
-                print(f"\n✗ Error procesando '{nombre_completo}': {e}")
+                print(f"\nError procesando '{nombre_completo}': {e}")
                 import traceback
                 traceback.print_exc()
     
     # Resumen global
     print(f"\n")
-    print("╔" + "═" * 68 + "╗")
-    print("║" + " " * 20 + "RESUMEN GLOBAL" + " " * 34 + "║")
-    print("╚" + "═" * 68 + "╝")
+    print("RESUMEN GLOBAL")
     print()
     
     print(f"{'Escena':<50} {'MinDist':>10} {'NNDR':>10} {'Filtradas':>10} {'Retenido':>10}")
