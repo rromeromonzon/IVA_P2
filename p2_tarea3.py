@@ -87,11 +87,68 @@ def correspondencias_puntos_interes(descriptores_imagen1, descriptores_imagen2, 
             correspondencias = np.asarray(lista_corr, dtype=np.int64)
         else:
             correspondencias = np.empty((0, 2), dtype=np.int64)
+    
+    elif tipoCorr == 'nndr':
+        # Nearest Neighbor Distance Ratio
+        # Umbral NNDR fijo en 0.75 según especificación
+        umbral_nndr = 0.75
+        lista_corr = []
+        usados_img2 = set()
+
+        for i, d1 in enumerate(descriptores_imagen1):
+            # Distancias euclídeas a todos los descriptores de la imagen 2
+            diffs = descriptores_imagen2 - d1
+            dists = np.linalg.norm(diffs, axis=1)
+
+            # Necesitamos al menos 2 descriptores en imagen 2 para calcular el ratio
+            if len(dists) < 2:
+                continue
+
+            # Ordenar por distancia (menor primero)
+            orden = np.argsort(dists)
+            
+            # Buscar los dos vecinos más cercanos no usados
+            vecinos_disponibles = []
+            for j in orden:
+                if j not in usados_img2:
+                    vecinos_disponibles.append(j)
+                    if len(vecinos_disponibles) >= 2:
+                        break
+            
+            # Si no hay al menos 2 vecinos disponibles, no podemos calcular el ratio
+            if len(vecinos_disponibles) < 2:
+                # Solo hay 1 vecino disponible, aplicamos umbral de distancia como en mindist
+                if len(vecinos_disponibles) == 1:
+                    j_nearest = vecinos_disponibles[0]
+                    if dists[j_nearest] < max_distancia:
+                        lista_corr.append([i, int(j_nearest)])
+                        usados_img2.add(int(j_nearest))
+                continue
+            
+            # Tenemos al menos 2 vecinos disponibles
+            j_nearest = vecinos_disponibles[0]
+            j_second = vecinos_disponibles[1]
+            
+            dist_nearest = dists[j_nearest]
+            dist_second = dists[j_second]
+            
+            # Calcular el ratio (evitar división por cero)
+            if dist_second > 0:
+                ratio = dist_nearest / dist_second
+                # Aceptar si el ratio es menor que el umbral Y la distancia es menor que max_distancia
+                if ratio < umbral_nndr and dist_nearest < max_distancia:
+                    lista_corr.append([i, int(j_nearest)])
+                    usados_img2.add(int(j_nearest))
+
+        if len(lista_corr) > 0:
+            correspondencias = np.asarray(lista_corr, dtype=np.int64)
+        else:
+            correspondencias = np.empty((0, 2), dtype=np.int64)
 
     return correspondencias
 
 if __name__ == "__main__":
-    print("Practica 2 - Tarea 3 - Test autoevaluación\n")               
+    print("Practica 2 - Tarea 3 - Test autoevaluación\n")              
 
     ## tests correspondencias tipo 'minDist' (tarea 3a)
     # print("Tests completados = " + str(test_p2_tarea3(disptime=-1,stop_at_error=True,debug=True,tipoDesc='hist',tipoCorr='mindist'))) #analizar todas las imagenes con descriptor 'hist' y ver errores

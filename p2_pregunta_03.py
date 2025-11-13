@@ -51,7 +51,7 @@ def plot_correspondences(img1, coords1, img2, coords2, corr, title, color='r'):
     plt.show()
 
 
-def analisis_p2_3(img_dir='IVA_P2/img', nbins=16, max_distancia=0.2):
+def analisis_p2_3(img_dir='img', nbins=16, max_distancia=0.2):
     """
     Aplica Detección, Descripción y Correspondencia a pares de imágenes 
     y analiza las diferencias entre descriptores 'hist' y 'mag-ori' usando los pares de test.
